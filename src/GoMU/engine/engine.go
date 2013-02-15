@@ -25,5 +25,5 @@ func (eng *Engine) Do(obj **object.Object, msg *message.Message) {
 	} else {
 		obj.Hear(&message.Message{"error", "You must be logged on to use " + msg.Command})
 	}
-	
+
 }

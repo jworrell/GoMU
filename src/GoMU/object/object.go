@@ -18,10 +18,9 @@ const (
 )
 
 const (
-	DUMMY_ID ObjectID = 0
+	DUMMY_ID     ObjectID = 0
 	NIL_LOCATION ObjectID = 0
 )
-
 
 type SerializeableObject struct {
 	ID         ObjectID
@@ -51,10 +50,10 @@ type Object struct {
 func NewObject(id ObjectID) *Object {
 	o := Object{}
 	o.id = id
-	
+
 	o.contents = make(map[*Object]bool)
 	o.attributes = make(map[string]string)
-	
+
 	return &o
 }
 
@@ -66,7 +65,7 @@ func (obj *Object) Serialize() *SerializeableObject {
 
 	if obj.home != nil {
 		homeId = obj.home.id
-	} 
+	}
 
 	so := SerializeableObject{
 		obj.id,
@@ -76,10 +75,10 @@ func (obj *Object) Serialize() *SerializeableObject {
 		make(map[string]string),
 	}
 
-	for k,v := range obj.attributes {
+	for k, v := range obj.attributes {
 		so.Attributes[k] = v
 	}
-	
+
 	return &so
 }
 
