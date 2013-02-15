@@ -32,3 +32,5 @@ _$*
 
 client/js/jquery.js
 bin
+pkg
+.project
