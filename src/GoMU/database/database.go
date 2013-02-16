@@ -3,6 +3,7 @@ package database
 import (
 	"GoMU/object"
 	"encoding/json"
+	"log"
 	"os"
 	"sync"
 )
@@ -34,6 +35,7 @@ func LoadDB(path string) *Database {
 		err := decoder.Decode(so)
 
 		if err != nil {
+			log.Println("Error:",err)
 			break
 		}
 
@@ -48,6 +50,10 @@ func LoadDB(path string) *Database {
 		if so.Home != object.NIL_LOCATION {
 			workingObj.SetHome(db.getOrCreateObj(so.Home))
 			workingObj.Move(workingObj.GetHome())
+		}
+
+		if so.Home != object.NIL_LOCATION {
+			workingObj.SetLink(db.getOrCreateObj(so.Links))
 		}
 
 		for k, v := range so.Attributes {

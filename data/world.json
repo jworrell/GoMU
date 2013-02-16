@@ -3,6 +3,7 @@
 	"Kind": 1,
 	"Owner": 2,
 	"Home": 0,
+	"Links": 0,
 	"Attributes": {
 		"name": "The Void",
 		"description": "Endless nothing."
@@ -14,6 +15,7 @@
 	"Kind": 2,
 	"Owner": 2,
 	"Home": 1,
+	"Links": 0,
 	"Attributes": {
 		"name": "Justin",
 		"description": "A dude."
@@ -22,11 +24,48 @@
 
 {
 	"ID": 3,
+	"Kind": 1,
+	"Owner": 2,
+	"Home": 0,
+	"Links": 0,
+	"Attributes": {
+		"name": "A room",
+		"description": "A empty room"
+	}
+}
+
+{
+	"ID": 4,
 	"Kind": 2,
-	"Owner": 3,
+	"Owner": 5,
 	"Home": 1,
+	"Links": 0,
 	"Attributes": {
 		"name": "Player2",
 		"description": "A dude."
+	}
+}
+
+{
+	"ID": 5,
+	"Kind": 4,
+	"Owner": 2,
+	"Home": 1,
+	"Links": 3,
+	"Attributes": {
+		"name": "A door",
+		"description": "A door to a room"
+	}
+}
+
+{
+	"ID": 6,
+	"Kind": 4,
+	"Owner": 2,
+	"Home": 3,
+	"Links": 1,
+	"Attributes": {
+		"name": "A door",
+		"description": "A door to nexus"
 	}
 }

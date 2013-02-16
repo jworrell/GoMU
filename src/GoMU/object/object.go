@@ -13,8 +13,8 @@ const (
 	_ ObjectType = iota
 	ROOM
 	PLAYER
-	EXIT
 	THING
+	EXIT
 )
 
 const (
@@ -27,6 +27,7 @@ type SerializeableObject struct {
 	Kind       ObjectType
 	Owner      ObjectID
 	Home       ObjectID
+	Links      ObjectID
 	Attributes map[string]string
 }
 
@@ -39,6 +40,7 @@ type Object struct {
 	owner    *Object
 	home     *Object
 	location *Object
+	links    *Object
 
 	contents map[*Object]bool
 
@@ -62,9 +64,14 @@ func (obj *Object) Serialize() *SerializeableObject {
 	defer obj.RUnlock()
 
 	homeId := ObjectID(0)
+	linksId := ObjectID(0)
 
 	if obj.home != nil {
 		homeId = obj.home.id
+	}
+
+	if obj.links != nil {
+		linksId = obj.links.id
 	}
 
 	so := SerializeableObject{
@@ -72,6 +79,7 @@ func (obj *Object) Serialize() *SerializeableObject {
 		obj.kind,
 		obj.owner.id,
 		homeId,
+		linksId,
 		make(map[string]string),
 	}
 
@@ -84,6 +92,21 @@ func (obj *Object) Serialize() *SerializeableObject {
 
 func (obj *Object) GetID() ObjectID {
 	return obj.id
+}
+
+func (obj *Object) GetContents() ObjectSlice {
+	obj.RLock()
+	defer obj.RUnlock()
+	
+	contents := make([]*Object, len(obj.contents))
+	idx := 0
+	
+	for  o := range obj.contents {
+		contents[idx] = o
+		idx++
+	}	
+
+	return contents
 }
 
 func (obj *Object) GetOwner() *Object {
@@ -99,6 +122,21 @@ func (obj *Object) SetOwner(owner *Object) {
 
 	obj.dirty = true
 	obj.owner = owner
+}
+
+func (obj *Object) GetLink() *Object {
+	obj.RLock()
+	defer obj.RUnlock()
+
+	return obj.links
+}
+
+func (obj *Object) SetLink(link *Object) {
+	obj.Lock()
+	defer obj.Unlock()
+
+	obj.dirty = true
+	obj.links = link
 }
 
 func (obj *Object) GetHome() *Object {
@@ -238,6 +276,22 @@ func (os ObjectSlice) Less(i, j int) bool {
 }
 
 func (os ObjectSlice) Swap(i, j int) {
+	tmp := os[i]
+	os[i] = os[j]
+	os[j] = tmp
+}
+
+type ObjectSliceByType []*Object
+
+func (os ObjectSliceByType) Len() int {
+	return len(os)
+}
+
+func (os ObjectSliceByType) Less(i, j int) bool {
+	return os[i].GetType() < os[j].GetType()
+}
+
+func (os ObjectSliceByType) Swap(i, j int) {
 	tmp := os[i]
 	os[i] = os[j]
 	os[j] = tmp
