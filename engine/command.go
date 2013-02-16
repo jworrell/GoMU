@@ -1,8 +1,8 @@
 package engine
 
 import (
-	"GoMU/message"
-	"GoMU/object"
+	"github.com/jworrell/GoMU/message"
+	"github.com/jworrell/GoMU/object"
 	"sort"
 )
 
