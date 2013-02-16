@@ -2,7 +2,9 @@ package object
 
 import (
 	"github.com/jworrell/GoMU/message"
+	"log"
 	"sort"
+	"strings"
 	"sync"
 )
 
@@ -240,20 +242,31 @@ func (obj *Object) SetWriter(writer chan *message.Message) {
 
 func (obj *Object) Hear(msg *message.Message) {
 	obj.RLock()
+	defer obj.RUnlock()
 
 	if obj.writer != nil {
 		select {
 		case obj.writer <- msg:
-			obj.RUnlock()
-
 		default:
-			obj.RUnlock()
-
-			obj.Lock()
-			obj.writer = nil
-			obj.Unlock()
+			log.Println("Dropped a message for " + obj.attributes["name"])
 		}
 	}
+}
+
+func (obj *Object) FindInside(key, pattern string) *Object {
+	if strings.Contains(strings.ToLower(obj.GetAttr(key)), strings.ToLower(pattern)) {
+		return obj
+	}
+
+	contents := obj.GetContents()
+
+	for _, o := range contents {
+		if strings.Contains(strings.ToLower(o.GetAttr(key)), strings.ToLower(pattern)) {
+			return o
+		}
+	}
+
+	return nil
 }
 
 func (obj *Object) Emit(msg *message.Message) {

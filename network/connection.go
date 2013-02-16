@@ -10,42 +10,49 @@ import (
 	"log"
 )
 
-const WRITE_QUEUE = 32
+const WRITE_QUEUE = 16
 
 func Connection(eng *engine.Engine, ws *websocket.Conn) {
 	decoder := json.NewDecoder(ws)
 	writer := make(chan *message.Message, WRITE_QUEUE)
+	kill := make(chan bool)
 
 	associatedObj := object.NewObject(object.DUMMY_ID)
 	associatedObj.SetWriter(writer)
+
+	defer func(o *object.Object) {
+		associatedObj.SetWriter(nil)
+		kill <- true
+	}(associatedObj)
 
 	go func() {
 		encoder := json.NewEncoder(ws)
 
 		for {
-			writerMsg := <-writer
-			err := encoder.Encode(writerMsg)
-
-			if err != nil {
-				if err != io.EOF {
-					log.Println("Unexpected error: ", err)
+			select {
+			case writerMsg := <-writer:
+				err := encoder.Encode(writerMsg)
+				if err != nil {
+					log.Println("Unexpected error (encode JSON): ", err)
 				}
 
-				break
+			case <-kill:
+				return
 			}
+
 		}
 	}()
 
 	for {
 		readerMsg := &message.Message{}
 		err := decoder.Decode(readerMsg)
+		readerMsg.Finalize()
 
 		if err != nil {
 			if err != io.EOF {
-				log.Println("Unexpected error: ", err)
+				log.Println("Unexpected error (decode JSON): ", err)
 			}
-
-			break
+			return
 		}
 
 		eng.Do(&associatedObj, readerMsg)

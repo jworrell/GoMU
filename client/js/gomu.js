@@ -4,7 +4,7 @@ var ws = new WebSocket("ws://localhost:8080/ws");
 $(document).ready(function() {
 	ws.onmessage = function(rawMsg) {
 		var msg = JSON.parse(rawMsg.data)
-		writeMessage(msg.Command + ": " + msg.Data)
+		writeMessage(msg.Data)
 	};
 	
 	$("#textEntry").keyup(function(evt) {
