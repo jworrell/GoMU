@@ -1,9 +1,9 @@
 package network
 
 import (
-	"GoMU/engine"
-	"GoMU/message"
-	"GoMU/object"
+	"github.com/jworrell/GoMU/engine"
+	"github.com/jworrell/GoMU/message"
+	"github.com/jworrell/GoMU/object"
 	"code.google.com/p/go.net/websocket"
 	"encoding/json"
 	"log"
