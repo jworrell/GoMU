@@ -10,12 +10,12 @@ type Engine struct {
 	db *database.Database
 }
 
-func Init(path string) (*Engine,error) {
-	db,err := database.LoadDB(path)
+func Init(path string) (*Engine, error) {
+	db, err := database.LoadDB(path)
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
-	return &Engine{db},nil
+	return &Engine{db}, nil
 }
 
 func (eng *Engine) Do(obj **object.Object, msg *message.Message) {

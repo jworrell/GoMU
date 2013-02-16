@@ -1,11 +1,12 @@
 package network
 
 import (
+	"code.google.com/p/go.net/websocket"
+	"encoding/json"
 	"github.com/jworrell/GoMU/engine"
 	"github.com/jworrell/GoMU/message"
 	"github.com/jworrell/GoMU/object"
-	"code.google.com/p/go.net/websocket"
-	"encoding/json"
+	"io"
 	"log"
 )
 
@@ -26,7 +27,10 @@ func Connection(eng *engine.Engine, ws *websocket.Conn) {
 			err := encoder.Encode(writerMsg)
 
 			if err != nil {
-				log.Println("Error: ", err)
+				if err != io.EOF {
+					log.Println("Unexpected error: ", err)
+				}
+
 				break
 			}
 		}
@@ -37,7 +41,10 @@ func Connection(eng *engine.Engine, ws *websocket.Conn) {
 		err := decoder.Decode(readerMsg)
 
 		if err != nil {
-			log.Println("Error: ", err)
+			if err != io.EOF {
+				log.Println("Unexpected error: ", err)
+			}
+
 			break
 		}
 

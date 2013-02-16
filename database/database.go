@@ -1,11 +1,11 @@
 package database
 
 import (
-	"github.com/jworrell/GoMU/object"
 	"encoding/json"
+	"github.com/jworrell/GoMU/object"
+	"io"
 	"os"
 	"sync"
-	"io"
 )
 
 type Database struct {
@@ -14,7 +14,7 @@ type Database struct {
 	players map[string]*object.Object
 }
 
-func LoadDB(path string) (*Database,error) {
+func LoadDB(path string) (*Database, error) {
 	db := Database{
 		sync.RWMutex{},
 		make(map[object.ObjectID]*object.Object),
@@ -26,17 +26,20 @@ func LoadDB(path string) (*Database,error) {
 	inFile, err := os.Open(path)
 
 	if err != nil {
-		return nil,err
+		return nil, err
 	}
 
 	decoder := json.NewDecoder(inFile)
 
 	for {
 		err := decoder.Decode(so)
-		
+
 		if err != nil {
-			if err == io.EOF {break}
-			return nil,err
+			if err == io.EOF {
+				break
+			}
+
+			return nil, err
 		}
 
 		workingObj := db.getOrCreateObj(so.ID)
@@ -61,7 +64,7 @@ func LoadDB(path string) (*Database,error) {
 		}
 	}
 
-	return &db,nil
+	return &db, nil
 }
 
 func (db *Database) getOrCreateObj(id object.ObjectID) *object.Object {

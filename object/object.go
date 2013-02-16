@@ -97,14 +97,14 @@ func (obj *Object) GetID() ObjectID {
 func (obj *Object) GetContents() ObjectSlice {
 	obj.RLock()
 	defer obj.RUnlock()
-	
+
 	contents := make([]*Object, len(obj.contents))
 	idx := 0
-	
-	for  o := range obj.contents {
+
+	for o := range obj.contents {
 		contents[idx] = o
 		idx++
-	}	
+	}
 
 	return contents
 }
