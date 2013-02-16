@@ -1,7 +1,7 @@
 package object
 
 import (
-	"GoMU/message"
+	"github.com/jworrell/GoMU/message"
 	"sort"
 	"sync"
 )
