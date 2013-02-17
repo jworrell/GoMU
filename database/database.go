@@ -37,6 +37,8 @@ func InitDB() (*Database, error) {
 	go func() {
 		defer sqliteDb.Close()
 
+        insertStmnt := sqliteDb.Prepare("INSERT OR REPLACE INTO objects (id, data) VALUES (?, ?)")
+
 		for {
 			so := <-db.saver
 			sob, err := json.Marshal(so)
@@ -45,7 +47,7 @@ func InitDB() (*Database, error) {
 				continue
 			}
 
-			err = sqliteDb.Exec("INSERT OR REPLACE INTO objects (id, data) VALUES (?, ?)", so.ID, sob)
+			err = insertStmnt.Exec(so.ID, sob)
 			if err != nil {
 				log.Println(sob)
 				continue
@@ -53,20 +55,20 @@ func InitDB() (*Database, error) {
 		}
 	}()
 
-	statement, err := sqliteDb.Prepare("SELECT data FROM objects")
+	selectStmnt, err := sqliteDb.Prepare("SELECT data FROM objects")
 	if err != nil {
 		return nil, err
 	}
 
-	err = statement.Exec()
+	err = selectStmnt.Exec()
 	if err != nil {
 		return nil, err
 	}
 
 	//TODO: Right now, it reads objects from the DB and then reinserts them. Figure out a way to fix this that doesn't suck.
-	for statement.Next() {
+	for selectStmnt.Next() {
 		jsonObj := make([]byte, 0)
-		statement.Scan(&jsonObj)
+		selectStmnt.Scan(&jsonObj)
 		so := &object.SerializableObject{}
 		json.Unmarshal(jsonObj, so)
 		db.AddSerializableObject(so)
