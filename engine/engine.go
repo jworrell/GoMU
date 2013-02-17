@@ -20,12 +20,12 @@ func Init(path string) (*Engine, error) {
 	}
 
 	/*
-	err = db.LoadJSON(path)
-	if err != nil {
-		return nil, err
-	}
+		err = db.LoadJSON(path)
+		if err != nil {
+			return nil, err
+		}
 	*/
-	
+
 	return &Engine{db}, nil
 }
 

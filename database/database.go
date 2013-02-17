@@ -37,7 +37,10 @@ func InitDB() (*Database, error) {
 	go func() {
 		defer sqliteDb.Close()
 
-        insertStmnt := sqliteDb.Prepare("INSERT OR REPLACE INTO objects (id, data) VALUES (?, ?)")
+		insertStmnt, err := sqliteDb.Prepare("INSERT OR REPLACE INTO objects (id, data) VALUES (?, ?)")
+		if err != nil {
+			panic("Failed to create insert statement. This shouldn't happen!")
+		}
 
 		for {
 			so := <-db.saver
