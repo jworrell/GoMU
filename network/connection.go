@@ -12,7 +12,7 @@ import (
 
 const WRITE_QUEUE = 16
 
-func Connection(eng *engine.Engine, ws *websocket.Conn) {
+func WSConnection(eng *engine.Engine, ws *websocket.Conn) {
 	decoder := json.NewDecoder(ws)
 	writer := make(chan *message.Message, WRITE_QUEUE)
 	kill := make(chan bool)

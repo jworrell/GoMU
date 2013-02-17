@@ -13,10 +13,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	go network.SocketServer(eng)
+
 	http.Handle("/", http.FileServer(http.Dir("client")))
 
 	http.Handle("/ws", websocket.Handler(func(ws *websocket.Conn) {
-		network.Connection(eng, ws)
+		network.WSConnection(eng, ws)
 	}))
 
 	http.ListenAndServe(":8080", nil)
