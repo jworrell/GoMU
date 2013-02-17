@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	eng, err := engine.Init("data/world.json")
+	eng, err := engine.Init("data/world.db")
 	if err != nil {
 		log.Fatal(err)
 	}

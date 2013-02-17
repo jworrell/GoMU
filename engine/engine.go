@@ -14,7 +14,7 @@ func Init(path string) (*Engine, error) {
 	var err error
 	var db *database.Database
 
-	db, err = database.InitDB()
+	db, err = database.InitDB(path)
 	if err != nil {
 		return nil, err
 	}

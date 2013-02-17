@@ -21,7 +21,7 @@ type Database struct {
 	saver   chan *object.SerializableObject
 }
 
-func InitDB() (*Database, error) {
+func InitDB(path string) (*Database, error) {
 	db := Database{
 		sync.RWMutex{},
 		make(map[object.ObjectID]*object.Object),
@@ -29,7 +29,7 @@ func InitDB() (*Database, error) {
 		make(chan *object.SerializableObject, WRITE_QUEUE_LENGTH),
 	}
 
-	sqliteDb, err := sqlite.Open("data/world.db")
+	sqliteDb, err := sqlite.Open(path)
 	if err != nil {
 		return nil, err
 	}
