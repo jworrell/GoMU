@@ -11,10 +11,21 @@ type Engine struct {
 }
 
 func Init(path string) (*Engine, error) {
-	db, err := database.LoadDB(path)
+	var err error
+	var db *database.Database
+
+	db, err = database.InitDB()
 	if err != nil {
 		return nil, err
 	}
+
+	/*
+	err = db.LoadJSON(path)
+	if err != nil {
+		return nil, err
+	}
+	*/
+	
 	return &Engine{db}, nil
 }
 

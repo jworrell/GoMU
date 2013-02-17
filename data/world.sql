@@ -1,0 +1,4 @@
+CREATE TABLE objects (
+	id INTEGER PRIMARY KEY,
+	data TEXT
+);

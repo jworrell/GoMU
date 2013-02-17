@@ -24,7 +24,7 @@ const (
 	NIL_LOCATION ObjectID = 0
 )
 
-type SerializeableObject struct {
+type SerializableObject struct {
 	ID         ObjectID
 	Kind       ObjectType
 	Owner      ObjectID
@@ -38,7 +38,6 @@ type Object struct {
 
 	id       ObjectID
 	kind     ObjectType
-	dirty    bool
 	owner    *Object
 	home     *Object
 	location *Object
@@ -49,24 +48,48 @@ type Object struct {
 	attributes map[string]string
 
 	writer chan *message.Message
+	saver  chan *SerializableObject
 }
 
-func NewObject(id ObjectID) *Object {
+func NewObject(saver chan *SerializableObject, id ObjectID) *Object {
 	o := Object{}
 	o.id = id
 
 	o.contents = make(map[*Object]bool)
 	o.attributes = make(map[string]string)
 
+	o.saver = saver
+	o.save()
+
 	return &o
 }
 
-func (obj *Object) Serialize() *SerializeableObject {
+// Not thread safe, only call from thread safe functions
+func (obj *Object) save() {
+	if obj.saver != nil {
+		so := obj.serialize()
+		obj.saver <- so
+	}
+}
+
+func (obj *Object) saveAndUnlock() {
+	obj.save()
+	obj.Unlock()
+}
+
+// Thread safe wrapper for serialize
+func (obj *Object) Serialize() *SerializableObject {
 	obj.RLock()
 	defer obj.RUnlock()
 
+	return obj.serialize()
+}
+
+// Not thread safe, only call from thread safe functions
+func (obj *Object) serialize() *SerializableObject {
 	homeId := ObjectID(0)
 	linksId := ObjectID(0)
+	ownerId := ObjectID(0)
 
 	if obj.home != nil {
 		homeId = obj.home.id
@@ -76,10 +99,14 @@ func (obj *Object) Serialize() *SerializeableObject {
 		linksId = obj.links.id
 	}
 
-	so := SerializeableObject{
+	if obj.owner != nil {
+		ownerId = obj.owner.id
+	}
+
+	so := SerializableObject{
 		obj.id,
 		obj.kind,
-		obj.owner.id,
+		ownerId,
 		homeId,
 		linksId,
 		make(map[string]string),
@@ -120,9 +147,8 @@ func (obj *Object) GetOwner() *Object {
 
 func (obj *Object) SetOwner(owner *Object) {
 	obj.Lock()
-	defer obj.Unlock()
+	defer obj.saveAndUnlock()
 
-	obj.dirty = true
 	obj.owner = owner
 }
 
@@ -135,9 +161,8 @@ func (obj *Object) GetLink() *Object {
 
 func (obj *Object) SetLink(link *Object) {
 	obj.Lock()
-	defer obj.Unlock()
+	defer obj.saveAndUnlock()
 
-	obj.dirty = true
 	obj.links = link
 }
 
@@ -150,9 +175,8 @@ func (obj *Object) GetHome() *Object {
 
 func (obj *Object) SetHome(home *Object) {
 	obj.Lock()
-	defer obj.Unlock()
+	defer obj.saveAndUnlock()
 
-	obj.dirty = true
 	obj.home = home
 }
 
@@ -165,9 +189,8 @@ func (obj *Object) GetType() ObjectType {
 
 func (obj *Object) SetType(kind ObjectType) {
 	obj.Lock()
-	defer obj.Unlock()
+	defer obj.saveAndUnlock()
 
-	obj.dirty = true
 	obj.kind = kind
 }
 
@@ -180,9 +203,8 @@ func (obj *Object) GetAttr(attr string) string {
 
 func (obj *Object) SetAttr(attr, value string) {
 	obj.Lock()
-	defer obj.Unlock()
+	defer obj.saveAndUnlock()
 
-	obj.dirty = true
 	obj.attributes[attr] = value
 }
 
@@ -236,7 +258,6 @@ func (obj *Object) SetWriter(writer chan *message.Message) {
 	obj.Lock()
 	defer obj.Unlock()
 
-	obj.dirty = true
 	obj.writer = writer
 }
 

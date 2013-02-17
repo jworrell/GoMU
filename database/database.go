@@ -1,32 +1,87 @@
 package database
 
 import (
+	"code.google.com/p/gosqlite/sqlite"
 	"encoding/json"
 	"github.com/jworrell/GoMU/object"
 	"io"
+	"log"
 	"os"
 	"sync"
+)
+
+const (
+	WRITE_QUEUE_LENGTH = 1024
 )
 
 type Database struct {
 	sync.RWMutex
 	objects map[object.ObjectID]*object.Object
 	players map[string]*object.Object
+	saver   chan *object.SerializableObject
 }
 
-func LoadDB(path string) (*Database, error) {
+func InitDB() (*Database, error) {
 	db := Database{
 		sync.RWMutex{},
 		make(map[object.ObjectID]*object.Object),
 		make(map[string]*object.Object),
+		make(chan *object.SerializableObject, WRITE_QUEUE_LENGTH),
 	}
 
-	so := &object.SerializeableObject{}
+	sqliteDb, err := sqlite.Open("data/world.db")
+	if err != nil {
+		return nil, err
+	}
+
+	go func() {
+		defer sqliteDb.Close()
+
+		for {
+			so := <-db.saver
+			sob, err := json.Marshal(so)
+			if err != nil {
+				log.Println(sob)
+				continue
+			}
+
+			err = sqliteDb.Exec("INSERT OR REPLACE INTO objects (id, data) VALUES (?, ?)", so.ID, sob)
+			if err != nil {
+				log.Println(sob)
+				continue
+			}
+		}
+	}()
+
+	statement, err := sqliteDb.Prepare("SELECT data FROM objects")
+	if err != nil {
+		return nil, err
+	}
+
+	err = statement.Exec()
+	if err != nil {
+		return nil, err
+	}
+
+	//TODO: Right now, it reads objects from the DB and then reinserts them. Figure out a way to fix this that doesn't suck.
+	for statement.Next() {
+		jsonObj := make([]byte, 0)
+		statement.Scan(&jsonObj)
+		so := &object.SerializableObject{}
+		json.Unmarshal(jsonObj, so)
+		db.AddSerializableObject(so)
+	}
+
+	return &db, nil
+}
+
+func (db *Database) LoadJSON(path string) error {
+	so := &object.SerializableObject{}
 
 	inFile, err := os.Open(path)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	decoder := json.NewDecoder(inFile)
@@ -36,35 +91,37 @@ func LoadDB(path string) (*Database, error) {
 
 		if err != nil {
 			if err == io.EOF {
-				break
+				return err
 			}
-
-			return nil, err
 		}
 
-		workingObj := db.getOrCreateObj(so.ID)
-		workingObj.SetType(so.Kind)
-		workingObj.SetOwner(db.getOrCreateObj(so.Owner))
-
-		if so.Kind == object.PLAYER {
-			db.players[so.Attributes["name"]] = workingObj
-		}
-
-		if so.Home != object.NIL_LOCATION {
-			workingObj.SetHome(db.getOrCreateObj(so.Home))
-			workingObj.Move(workingObj.GetHome())
-		}
-
-		if so.Home != object.NIL_LOCATION {
-			workingObj.SetLink(db.getOrCreateObj(so.Links))
-		}
-
-		for k, v := range so.Attributes {
-			workingObj.SetAttr(k, v)
-		}
+		db.AddSerializableObject(so)
 	}
 
-	return &db, nil
+	return nil
+}
+
+func (db *Database) AddSerializableObject(so *object.SerializableObject) {
+	workingObj := db.getOrCreateObj(so.ID)
+	workingObj.SetType(so.Kind)
+	workingObj.SetOwner(db.getOrCreateObj(so.Owner))
+
+	if so.Kind == object.PLAYER {
+		db.players[so.Attributes["name"]] = workingObj
+	}
+
+	if so.Home != object.NIL_LOCATION {
+		workingObj.SetHome(db.getOrCreateObj(so.Home))
+		workingObj.Move(workingObj.GetHome())
+	}
+
+	if so.Home != object.NIL_LOCATION {
+		workingObj.SetLink(db.getOrCreateObj(so.Links))
+	}
+
+	for k, v := range so.Attributes {
+		workingObj.SetAttr(k, v)
+	}
 }
 
 func (db *Database) getOrCreateObj(id object.ObjectID) *object.Object {
@@ -74,7 +131,7 @@ func (db *Database) getOrCreateObj(id object.ObjectID) *object.Object {
 	obj := db.objects[id]
 
 	if obj == nil {
-		obj = object.NewObject(id)
+		obj = object.NewObject(db.saver, id)
 		db.objects[id] = obj
 	}
 

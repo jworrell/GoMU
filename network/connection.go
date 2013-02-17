@@ -17,7 +17,7 @@ func Connection(eng *engine.Engine, ws *websocket.Conn) {
 	writer := make(chan *message.Message, WRITE_QUEUE)
 	kill := make(chan bool)
 
-	associatedObj := object.NewObject(object.DUMMY_ID)
+	associatedObj := object.NewObject(nil, object.DUMMY_ID)
 	associatedObj.SetWriter(writer)
 
 	defer func(o *object.Object) {
@@ -46,8 +46,6 @@ func Connection(eng *engine.Engine, ws *websocket.Conn) {
 	for {
 		readerMsg := &message.Message{}
 		err := decoder.Decode(readerMsg)
-		readerMsg.Finalize()
-
 		if err != nil {
 			if err != io.EOF {
 				log.Println("Unexpected error (decode JSON): ", err)
@@ -55,6 +53,7 @@ func Connection(eng *engine.Engine, ws *websocket.Conn) {
 			return
 		}
 
+		readerMsg.Finalize()
 		eng.Do(&associatedObj, readerMsg)
 	}
 }
