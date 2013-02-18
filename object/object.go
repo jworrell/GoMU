@@ -20,8 +20,9 @@ const (
 )
 
 const (
-	DUMMY_ID     ObjectID = 0
-	NIL_LOCATION ObjectID = 0
+	DUMMY_ID         ObjectID = 0
+	NIL_LOCATION     ObjectID = 0
+	DEFAULT_LOCATION ObjectID = 1
 )
 
 type SerializableObject struct {

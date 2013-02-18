@@ -16,13 +16,14 @@ func (com *Command) UseUnathenticated() bool {
 }
 
 var Commands = map[string]Command{
-	"login": Command{(*Engine).login, true},
-	"say":   Command{(*Engine).say, false},
-	"pose":  Command{(*Engine).pose, false},
-	"look":  Command{(*Engine).look, false},
-	"l":     Command{(*Engine).look, false},
-	"move":  Command{(*Engine).move, false},
-	"m":     Command{(*Engine).move, false},
+	"login":    Command{(*Engine).login, true},
+	"register": Command{(*Engine).register, true},
+	"say":      Command{(*Engine).say, false},
+	"pose":     Command{(*Engine).pose, false},
+	"look":     Command{(*Engine).look, false},
+	"l":        Command{(*Engine).look, false},
+	"move":     Command{(*Engine).move, false},
+	"m":        Command{(*Engine).move, false},
 }
 
 func (eng *Engine) login(obj **object.Object, msg *message.Message) {
@@ -36,6 +37,31 @@ func (eng *Engine) login(obj **object.Object, msg *message.Message) {
 		player.Hear(message.MakeMessage("result", "Successfully logged in as "+player.GetAttr("name")))
 		(*obj) = player
 		player.GetLocation().Emit(message.MakeMessage("emit", player.GetAttr("name")+" has connected!"))
+		eng.look(obj, &message.Message{})
+	}
+}
+
+func (eng *Engine) register(obj **object.Object, msg *message.Message) {
+	player := eng.db.GetPlayer(msg.Data)
+
+	if player != nil {
+		obj.Hear(message.MakeMessage("error", "Player named "+msg.Data+" already exists!"))
+	} else {
+		writer := obj.GetWriter()
+		newPlayer := eng.db.CreateObject()
+		newPlayer.SetWriter(writer)
+		newPlayer.SetAttr("name", msg.Data)
+		newPlayer.SetType(object.PLAYER)
+		newPlayer.SetOwner(newPlayer)
+
+		location := eng.db.GetObject(object.DEFAULT_LOCATION)
+		newPlayer.SetHome(location)
+		newPlayer.Move(location)
+
+		newPlayer.Hear(message.MakeMessage("result", "Successfully registered as "+msg.Data))
+
+		(*obj) = newPlayer
+		newPlayer.GetLocation().Emit(message.MakeMessage("emit", newPlayer.GetAttr("name")+" has connected!"))
 		eng.look(obj, &message.Message{})
 	}
 }

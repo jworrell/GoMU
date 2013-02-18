@@ -19,6 +19,7 @@ type Database struct {
 	objects map[object.ObjectID]*object.Object
 	players map[string]*object.Object
 	saver   chan *object.SerializableObject
+	nextId  object.ObjectID
 }
 
 func InitDB(path string) (*Database, error) {
@@ -27,6 +28,7 @@ func InitDB(path string) (*Database, error) {
 		make(map[object.ObjectID]*object.Object),
 		make(map[string]*object.Object),
 		make(chan *object.SerializableObject, WRITE_QUEUE_LENGTH),
+		0,
 	}
 
 	sqliteDb, err := sqlite.Open(path)
@@ -34,10 +36,11 @@ func InitDB(path string) (*Database, error) {
 		return nil, err
 	}
 
+	// TODO: Why doesn't my prepared insert work?!
 	go func() {
 		defer sqliteDb.Close()
 
-		insertStmnt, err := sqliteDb.Prepare("INSERT OR REPLACE INTO objects (id, data) VALUES (?, ?)")
+		//insertStmnt, err := sqliteDb.Prepare("INSERT OR REPLACE INTO objects (id, data) VALUES (?, ?)")
 		if err != nil {
 			panic("Failed to create insert statement. This shouldn't happen!")
 		}
@@ -50,7 +53,8 @@ func InitDB(path string) (*Database, error) {
 				continue
 			}
 
-			err = insertStmnt.Exec(so.ID, sob)
+			err = sqliteDb.Exec("INSERT OR REPLACE INTO objects (id, data) VALUES (?, ?)", so.ID, sob)
+			//err = insertStmnt.Exec(so.ID, sob)
 			if err != nil {
 				log.Println(sob)
 				continue
@@ -68,13 +72,16 @@ func InitDB(path string) (*Database, error) {
 		return nil, err
 	}
 
-	//TODO: Right now, it reads objects from the DB and then reinserts them. Figure out a way to fix this that doesn't suck.
+	// TODO: Right now, it reads objects from the DB and then reinserts them. Figure out a way to fix this that doesn't suck.
 	for selectStmnt.Next() {
 		jsonObj := make([]byte, 0)
 		selectStmnt.Scan(&jsonObj)
 		so := &object.SerializableObject{}
 		json.Unmarshal(jsonObj, so)
 		db.AddSerializableObject(so)
+		if so.ID >= db.nextId {
+			db.nextId++
+		}
 	}
 
 	return &db, nil
@@ -129,16 +136,12 @@ func (db *Database) AddSerializableObject(so *object.SerializableObject) {
 	}
 }
 
-func (db *Database) getOrCreateObj(id object.ObjectID) *object.Object {
+func (db *Database) CreateObject() *object.Object {
 	db.Lock()
 	defer db.Unlock()
 
-	obj := db.objects[id]
-
-	if obj == nil {
-		obj = object.NewObject(db.saver, id)
-		db.objects[id] = obj
-	}
+	id := db.getNextId()
+	obj := object.NewObject(db.saver, id)
 
 	return obj
 }
@@ -155,4 +158,25 @@ func (db *Database) GetObject(id object.ObjectID) *object.Object {
 	defer db.RUnlock()
 
 	return db.objects[id]
+}
+
+func (db *Database) getOrCreateObj(id object.ObjectID) *object.Object {
+	db.Lock()
+	defer db.Unlock()
+
+	obj := db.objects[id]
+
+	if obj == nil {
+		obj = object.NewObject(db.saver, id)
+		db.objects[id] = obj
+	}
+
+	return obj
+}
+
+// Not thread safe
+func (db *Database) getNextId() object.ObjectID {
+	id := db.nextId
+	db.nextId++
+	return id
 }
