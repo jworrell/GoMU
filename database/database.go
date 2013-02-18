@@ -36,11 +36,10 @@ func InitDB(path string) (*Database, error) {
 		return nil, err
 	}
 
-	// TODO: Why doesn't my prepared insert work?!
 	go func() {
 		defer sqliteDb.Close()
 
-		//insertStmnt, err := sqliteDb.Prepare("INSERT OR REPLACE INTO objects (id, data) VALUES (?, ?)")
+		insertStmnt, err := sqliteDb.Prepare("INSERT OR REPLACE INTO objects (id, data) VALUES (?, ?)")
 		if err != nil {
 			panic("Failed to create insert statement. This shouldn't happen!")
 		}
@@ -53,8 +52,13 @@ func InitDB(path string) (*Database, error) {
 				continue
 			}
 
-			err = sqliteDb.Exec("INSERT OR REPLACE INTO objects (id, data) VALUES (?, ?)", so.ID, sob)
-			//err = insertStmnt.Exec(so.ID, sob)
+			err = insertStmnt.Exec(so.ID, sob)
+			if err != nil {
+				log.Println(sob)
+				continue
+			}
+
+			err = insertStmnt.Next()
 			if err != nil {
 				log.Println(sob)
 				continue
