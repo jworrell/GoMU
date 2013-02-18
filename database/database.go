@@ -58,11 +58,7 @@ func InitDB(path string) (*Database, error) {
 				continue
 			}
 
-			err = insertStmnt.Next()
-			if err != nil {
-				log.Println(sob)
-				continue
-			}
+			insertStmnt.Next()
 		}
 	}()
 
