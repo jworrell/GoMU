@@ -262,6 +262,20 @@ func (obj *Object) SetWriter(writer chan *message.Message) {
 	obj.writer = writer
 }
 
+func (obj *Object) GetSaver() chan *SerializableObject {
+	obj.RLock()
+	defer obj.RUnlock()
+
+	return obj.saver
+}
+
+func (obj *Object) SetSaver(saver chan *SerializableObject) {
+	obj.Lock()
+	defer obj.Unlock()
+
+	obj.saver = saver
+}
+
 func (obj *Object) Hear(msg *message.Message) {
 	obj.RLock()
 	defer obj.RUnlock()

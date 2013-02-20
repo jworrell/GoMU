@@ -30,13 +30,13 @@ func (eng *Engine) login(obj **object.Object, msg *message.Message) {
 	player := eng.db.GetPlayer(msg.Data)
 
 	if player == nil {
-		obj.Hear(message.MakeMessage("error", "No player named "+msg.Data+" exists!"))
+		obj.Hear(message.MakeMessage("error", "No player named %s exists!", msg.Data))
 	} else {
 		writer := obj.GetWriter()
 		player.SetWriter(writer)
-		player.Hear(message.MakeMessage("result", "Successfully logged in as "+player.GetAttr("name")))
+		player.Hear(message.MakeMessage("result", "Successfully logged in as %s", player.GetAttr("name")))
 		(*obj) = player
-		player.GetLocation().Emit(message.MakeMessage("emit", player.GetAttr("name")+" has connected!"))
+		player.GetLocation().Emit(message.MakeMessage("emit", "%s has connected!", player.GetAttr("name")))
 		eng.look(obj, &message.Message{})
 	}
 }
@@ -45,7 +45,7 @@ func (eng *Engine) register(obj **object.Object, msg *message.Message) {
 	player := eng.db.GetPlayer(msg.Data)
 
 	if player != nil {
-		obj.Hear(message.MakeMessage("error", "Player named "+msg.Data+" already exists!"))
+		obj.Hear(message.MakeMessage("error", "Player named %s already exists!", msg.Data))
 	} else {
 		writer := obj.GetWriter()
 		newPlayer := eng.db.CreateObject()
@@ -58,20 +58,20 @@ func (eng *Engine) register(obj **object.Object, msg *message.Message) {
 		newPlayer.SetHome(location)
 		newPlayer.Move(location)
 
-		newPlayer.Hear(message.MakeMessage("result", "Successfully registered as "+msg.Data))
+		newPlayer.Hear(message.MakeMessage("result", "Successfully registered as %s", msg.Data))
 
 		(*obj) = newPlayer
-		newPlayer.GetLocation().Emit(message.MakeMessage("emit", newPlayer.GetAttr("name")+" has connected!"))
+		newPlayer.GetLocation().Emit(message.MakeMessage("emit", "%s has connected!", newPlayer.GetAttr("name")))
 		eng.look(obj, &message.Message{})
 	}
 }
 
 func (eng *Engine) say(obj **object.Object, msg *message.Message) {
-	obj.GetLocation().Emit(message.MakeMessage("emit", obj.GetAttr("name")+" says, \""+msg.Data+"\""))
+	obj.GetLocation().Emit(message.MakeMessage("emit", "%s says, \"%s\"", obj.GetAttr("name"), msg.Data))
 }
 
 func (eng *Engine) pose(obj **object.Object, msg *message.Message) {
-	obj.GetLocation().Emit(message.MakeMessage("emit", obj.GetAttr("name")+" "+msg.Data))
+	obj.GetLocation().Emit(message.MakeMessage("emit", "%s %s", obj.GetAttr("name"), msg.Data))
 }
 
 func (eng *Engine) look(obj **object.Object, msg *message.Message) {
@@ -82,20 +82,20 @@ func (eng *Engine) look(obj **object.Object, msg *message.Message) {
 		contents := location.GetContents()
 		sort.Sort(object.ObjectSliceByType(contents))
 
-		result.Append(location.GetAttr("name") + "\n" + location.GetAttr("description") + "\n\n")
+		result.Append("%s (#%d)\n%s\n\n", location.GetAttr("name"), location.GetID(), location.GetAttr("description"))
 		result.Append("Contents:\n")
 
 		for _, thing := range contents {
 			if thing.GetType() != object.PLAYER || thing.GetWriter() != nil {
-				result.Append(thing.GetAttr("name") + "\n")
+				result.Append("%s (#%d)\n", thing.GetAttr("name"), thing.GetID())
 			}
 		}
 	} else {
 		subj := location.FindInside("name", msg.Data)
 		if subj == nil {
-			result.Append(msg.Data + " not found!")
+			result.Append("%s not found!", msg.Data)
 		} else {
-			result.Append(subj.GetAttr("name") + "\n" + subj.GetAttr("description") + "\n\n")
+			result.Append("%s (#%d)\n%s\n\n", subj.GetAttr("name"), subj.GetID(), subj.GetAttr("description"))
 		}
 	}
 
@@ -108,11 +108,11 @@ func (eng *Engine) move(obj **object.Object, msg *message.Message) {
 
 	if exit != nil && exit.GetType() == object.EXIT {
 		dest := exit.GetLink()
-		location.Emit(message.MakeMessage("emit", obj.GetAttr("name")+" left through "+exit.GetAttr("name")))
+		location.Emit(message.MakeMessage("emit", "%s left through %s", obj.GetAttr("name"), exit.GetAttr("name")))
 		obj.Move(dest)
-		dest.Emit(message.MakeMessage("emit", obj.GetAttr("name")+" arrived from "+location.GetAttr("name")))
+		dest.Emit(message.MakeMessage("emit", "%s arrived from %s", obj.GetAttr("name"), location.GetAttr("name")))
 		eng.look(obj, &message.Message{})
 	} else {
-		obj.Hear(message.MakeMessage("error", msg.Data+" not found or not an exit!"))
+		obj.Hear(message.MakeMessage("error", "%s not found or not an exit!", msg.Data))
 	}
 }
