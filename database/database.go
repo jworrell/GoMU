@@ -19,6 +19,8 @@ type Database struct {
 	objects map[object.ObjectID]*object.Object
 	players map[string]*object.Object
 	saver   chan *object.SerializableObject
+	die     chan bool
+	done    chan bool
 	nextId  object.ObjectID
 }
 
@@ -28,6 +30,8 @@ func InitDB(path string) (*Database, error) {
 		make(map[object.ObjectID]*object.Object),
 		make(map[string]*object.Object),
 		make(chan *object.SerializableObject, WRITE_QUEUE_LENGTH),
+		make(chan bool),
+		make(chan bool),
 		0,
 	}
 
@@ -56,14 +60,17 @@ func InitDB(path string) (*Database, error) {
 			db.nextId++
 		}
 	}
-	
-	for _,obj := range db.objects {
+
+	for _, obj := range db.objects {
 		obj.SetSaver(db.saver)
 	}
 
 	// We're done loading the database, start the save goroutine
 	go func() {
-		defer sqliteDb.Close()
+		defer func() {
+			sqliteDb.Close()
+			db.done <- true
+		}()
 
 		insertStmnt, err := sqliteDb.Prepare("INSERT OR REPLACE INTO objects (id, data) VALUES (?, ?)")
 		if err != nil {
@@ -71,20 +78,24 @@ func InitDB(path string) (*Database, error) {
 		}
 
 		for {
-			so := <-db.saver
-			sob, err := json.Marshal(so)
-			if err != nil {
-				log.Println(sob)
-				continue
-			}
+			select {
+			case <-db.die:
+				return
+			case so := <-db.saver:
+				sob, err := json.Marshal(so)
+				if err != nil {
+					log.Println(sob)
+					continue
+				}
 
-			err = insertStmnt.Exec(so.ID, sob)
-			if err != nil {
-				log.Println(sob)
-				continue
-			}
+				err = insertStmnt.Exec(so.ID, sob)
+				if err != nil {
+					log.Println(sob)
+					continue
+				}
 
-			insertStmnt.Next()
+				insertStmnt.Next()
+			}
 		}
 	}()
 
@@ -157,6 +168,13 @@ func (db *Database) GetPlayer(name string) *object.Object {
 	return db.players[name]
 }
 
+func (db *Database) GetPlayers() map[string]*object.Object {
+	db.RLock()
+	defer db.RUnlock()
+
+	return db.players
+}
+
 func (db *Database) GetObject(id object.ObjectID) *object.Object {
 	db.RLock()
 	defer db.RUnlock()
@@ -183,4 +201,9 @@ func (db *Database) getNextId() object.ObjectID {
 	id := db.nextId
 	db.nextId++
 	return id
+}
+
+func (db *Database) Shutdown() {
+	db.die <- true
+	<-db.done
 }

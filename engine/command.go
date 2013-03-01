@@ -19,11 +19,13 @@ var Commands = map[string]Command{
 	"login":    Command{(*Engine).login, true},
 	"register": Command{(*Engine).register, true},
 	"say":      Command{(*Engine).say, false},
+	"wall":     Command{(*Engine).wall, false},
 	"pose":     Command{(*Engine).pose, false},
 	"look":     Command{(*Engine).look, false},
 	"l":        Command{(*Engine).look, false},
 	"move":     Command{(*Engine).move, false},
 	"m":        Command{(*Engine).move, false},
+	"shutdown": Command{(*Engine).shutdown, false},
 }
 
 func (eng *Engine) login(obj **object.Object, msg *message.Message) {
@@ -95,7 +97,7 @@ func (eng *Engine) look(obj **object.Object, msg *message.Message) {
 		if subj == nil {
 			result.Append("%s not found!", msg.Data)
 		} else {
-			result.Append("%s (#%d)\n%s\n\n", subj.GetAttr("name"), subj.GetID(), subj.GetAttr("description"))
+			result.Append("%s (#%d)\n%s\n", subj.GetAttr("name"), subj.GetID(), subj.GetAttr("description"))
 		}
 	}
 
@@ -115,4 +117,15 @@ func (eng *Engine) move(obj **object.Object, msg *message.Message) {
 	} else {
 		obj.Hear(message.MakeMessage("error", "%s not found or not an exit!", msg.Data))
 	}
+}
+
+func (eng *Engine) wall(obj **object.Object, msg *message.Message) {
+	for _, player := range eng.db.GetPlayers() {
+		player.Hear(msg)
+	}
+}
+
+func (eng *Engine) shutdown(obj **object.Object, msg *message.Message) {
+	eng.wall(obj, message.MakeMessage("emit", "Server is shutting down now!"))
+	eng.Shutdown()
 }
