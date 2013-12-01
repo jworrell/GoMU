@@ -142,7 +142,7 @@ func (db *Database) AddSerializableObject(saver chan *object.SerializableObject,
 		workingObj.Move(workingObj.GetHome())
 	}
 
-	if so.Home != object.NIL_LOCATION {
+	if so.Links != object.NIL_LOCATION {
 		workingObj.SetLink(db.getOrCreateObj(saver, so.Links))
 	}
 
